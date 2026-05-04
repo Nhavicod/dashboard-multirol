@@ -11,13 +11,37 @@ import {
     ChevronRight, Wallet, Send, MessageSquare, Link as LinkIcon, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
+import { 
+    getAuth, onAuthStateChanged, signOut, signInWithCustomToken,
+    signInWithEmailAndPassword, createUserWithEmailAndPassword 
+} from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
+
+// ==========================================
+// CONFIGURACIÓN FIREBASE DIRECTA Y GLOBAL
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyB2ci5KaDXj6lRtsbPf-FamrL_ltmtbz8c",
+  authDomain: "nhavisoccer.firebaseapp.com",
+  projectId: "nhavisoccer",
+  storageBucket: "nhavisoccer.firebasestorage.app",
+  messagingSenderId: "373043302721",
+  appId: "1:373043302721:web:6fc0bdcad18173415191c0"
+};
+
+const appId = 'nhavisoccer-core'; 
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ==========================================
+// PARAMETRIZACIÓN DE ROLES (ADMINISTRADORES)
+// ==========================================
+const ADMIN_EMAILS = ["admin@nhavisoccer.com", "ivan@nhavisoccer.com"];
 
 // ==========================================
 // 0. ESTÉTICA DASHBORINO OS v4.0 (ZERO-LAG)
 // ==========================================
-
 const DASHBORINO_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;900&family=Outfit:wght@300;400;600;800;900&display=swap');
 
@@ -41,7 +65,6 @@ const DASHBORINO_STYLES = `
 
   .font-jetbrains { font-family: 'JetBrains Mono', monospace; }
 
-  /* La Matriz (Grid) */
   .bg-matriz {
     background-image: 
       linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
@@ -49,7 +72,6 @@ const DASHBORINO_STYLES = `
     background-size: 50px 50px;
   }
 
-  /* Materiales: Cristal Inteligente */
   .glass-panel {
     background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.005));
     backdrop-filter: blur(12px) saturate(180%);
@@ -66,7 +88,6 @@ const DASHBORINO_STYLES = `
     box-shadow: inset 0 1px 2px rgba(255,255,255,0.1), 0 10px 40px rgba(0,0,0,0.8);
   }
 
-  /* Scrollbars ocultas o personalizadas */
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   
@@ -74,7 +95,6 @@ const DASHBORINO_STYLES = `
   .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 8px; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 8px; }
 
-  /* Animaciones Base */
   .animate-fade-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -87,7 +107,6 @@ const DASHBORINO_STYLES = `
     to { opacity: 1; transform: scale(1); }
   }
 
-  /* Animación Carrusel */
   @keyframes adPanZoom {
     0% { transform: scale(1.3) translateY(-10%); }
     75% { transform: scale(1.4) translateY(10%); }
@@ -99,15 +118,6 @@ const DASHBORINO_STYLES = `
 // ==========================================
 // 1. CONFIGURACIÓN GLOBAL Y CONSTANTES
 // ==========================================
-
-const CONFIG = { 
-    UI: { 
-        GLASS: 'rgba(10, 10, 15, 0.12)', 
-        NOISE: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E")` 
-    } 
-};
-
-// --- GUÍAS OPERATIVAS ---
 const GUIDES = {
     dashboard: [
         { title: "Live Center", desc: "Inicia partidos programados, modifica marcadores en tiempo real y finaliza para enviar al buffer." },
@@ -119,17 +129,8 @@ const GUIDES = {
     ],
     coins: [
         { title: "Momios", desc: "El algoritmo pre-calcula cuotas. Confírmalas para abrirlas a los usuarios en la App 2." },
-        { title: "Roles", desc: "El usuario 'Admin' gestiona. 'Jugador 1/2' pueden apostar a nivel global en todos los nodos." }
+        { title: "Roles", desc: "El usuario 'Admin' gestiona. 'Jugador' pueden apostar a nivel global en todos los nodos." }
     ]
-};
-
-const firebaseConfig = {
-  apiKey: "AIzaSyB2ci5KaDXj6lRtsbPf-FamrL_ltmtbz8c",
-  authDomain: "nhavisoccer.firebaseapp.com",
-  projectId: "nhavisoccer",
-  storageBucket: "nhavisoccer.firebasestorage.app",
-  messagingSenderId: "373043302721",
-  appId: "1:373043302721:web:6fc0bdcad18173415191c0"
 };
 
 const FLAG_MAP = { 
@@ -174,7 +175,6 @@ const getTeamLogoUrl = (name) => {
     return FLAG_MAP[cleanName] ? `https://flagcdn.com/w160/${FLAG_MAP[cleanName]}.png` : null;
 };
 
-// FUNCIÓN MODIFICADA: LOGOS PREDETERMINADOS (SIN FONDO, VECTORIZADOS, EFECTO GLOW)
 const getSafeLogo = (team, divisions) => {
     if (!team) return null;
     if (team.customLogo) return team.customLogo;
@@ -287,6 +287,72 @@ const getDominantColor = async (src) => {
 };
 
 // ==========================================
+// PANTALLA DE ACCESO (LOGIN / REGISTRO)
+// ==========================================
+function LoginScreen() {
+    const [isLogin, setIsLogin] = useState(true);
+    const [email, setEmail] = useState("");
+    const [pass, setPass] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true); setError("");
+        try {
+            if (isLogin) {
+                await signInWithEmailAndPassword(auth, email, pass);
+            } else {
+                await createUserWithEmailAndPassword(auth, email, pass);
+            }
+        } catch (err) {
+            if(err.code === 'auth/email-already-in-use') setError("El identificador ya existe.");
+            else if(err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') setError("Credenciales incorrectas.");
+            else if(err.code === 'auth/weak-password') setError("La clave debe tener al menos 6 caracteres.");
+            else setError("Error de conexión. Intente nuevamente.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center p-4 bg-matriz bg-[#020617] text-white">
+            <style dangerouslySetInnerHTML={{__html: DASHBORINO_STYLES}} />
+            <div className="glass-panel-heavy p-8 rounded-[2.5rem] w-full max-w-md border border-cyan-500/20 animate-scale-in relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-[80px] pointer-events-none" />
+                <div className="flex flex-col items-center mb-8 relative z-10">
+                    <div className="w-20 h-20 bg-cyan-500/10 rounded-3xl flex items-center justify-center border border-cyan-500/30 mb-4 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+                        <Shield size={40} className="text-cyan-400" />
+                    </div>
+                    <h2 className="text-2xl font-black uppercase tracking-[0.2em] text-white font-outfit">NHAVI SOCCER</h2>
+                    <p className="text-[10px] font-jetbrains text-cyan-400/60 uppercase mt-2">Acceso al Núcleo de Gestión</p>
+                </div>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4 relative z-10">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black uppercase text-slate-500 ml-2 font-jetbrains">Identificador (Correo)</label>
+                        <input type="email" value={email} onChange={e=>setEmail(e.target.value)} className="bg-black/40 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-cyan-500 transition-all font-outfit text-sm" placeholder="correo@ejemplo.com" required/>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black uppercase text-slate-500 ml-2 font-jetbrains">Clave de Encriptación</label>
+                        <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="bg-black/40 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-cyan-500 transition-all font-outfit text-sm" placeholder="••••••••" required/>
+                    </div>
+                    {error && <p className="text-rose-400 text-[10px] font-black uppercase text-center mt-2 font-jetbrains bg-rose-500/10 py-2 rounded-lg border border-rose-500/20">{error}</p>}
+                    <button type="submit" disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-black py-4 rounded-2xl mt-2 transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] uppercase text-xs tracking-widest flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">
+                        {loading ? <Activity size={18} className="animate-spin" /> : (isLogin ? <><Unlock size={18}/> Iniciar Secuencia</> : <><UserPlus size={18}/> Registrar Identidad</>)}
+                    </button>
+                </form>
+                <div className="mt-6 text-center relative z-10">
+                    <button onClick={() => { setIsLogin(!isLogin); setError(""); }} className="text-[10px] text-slate-400 hover:text-cyan-400 uppercase font-jetbrains tracking-widest transition-colors">
+                        {isLogin ? "¿No tienes acceso? Solicita registro" : "Ya tengo acceso. Volver al Login"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+// ==========================================
 // 3. SUB-COMPONENTES UI
 // ==========================================
 
@@ -375,7 +441,6 @@ const BackgroundEngine = memo(({ themeColor, mouseRef }) => {
     );
 });
 
-// CARRUSEL PUBLICITARIO CONTRAÍBLE
 const AdCarousel = memo(({ ads }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isOpen, setIsOpen] = useState(true);
@@ -431,7 +496,6 @@ const AdCarousel = memo(({ ads }) => {
                     </div>
                 )}
             </div>
-            {/* Pestaña Contraíble */}
             <button onClick={() => setIsOpen(!isOpen)} className={`bg-black/60 border border-white/10 px-6 py-1.5 rounded-b-xl text-[9px] text-slate-400 hover:text-white uppercase font-black tracking-widest backdrop-blur-md shadow-[0_5px_15px_rgba(0,0,0,0.5)] z-20 flex items-center gap-1.5 transition-all ${isOpen ? '-mt-2' : ''}`}>
                 {isOpen ? <ChevronUp size={14}/> : <ChevronDown size={14}/>} {isOpen ? 'Ocultar' : 'Anuncios'}
             </button>
@@ -529,8 +593,9 @@ const HubModule = memo(({ icon: Icon, color, label, isActive, onClick }) => (
 // 4. VISTAS PRINCIPALES DE LA APP
 // ==========================================
 
-const UserAppView = memo(({ appMode, bettingData, setBettingData, liveMatches, allSortedTeams, getTeamName, showToast, requireConfirm, userAppTab, setUserAppTab, leagueSettings, messages }) => {
-    const currentUserData = bettingData.users[appMode] || { name: 'Invitado', coins: 0, bets: [] };
+const UserAppView = memo(({ appMode, currentUser, bettingData, setBettingData, liveMatches, allSortedTeams, getTeamName, showToast, requireConfirm, userAppTab, setUserAppTab, leagueSettings, messages }) => {
+    const defaultName = currentUser?.email?.split('@')[0] || 'Jugador';
+    const currentUserData = bettingData.users[appMode] || { name: defaultName, coins: 1000, bets: [] };
     const [activeDiv, setActiveDiv] = useState(leagueSettings.divisions[0]?.name || '');
     
     useEffect(() => { if (!activeDiv && leagueSettings.divisions.length > 0) setActiveDiv(leagueSettings.divisions[0].name); }, [leagueSettings.divisions, activeDiv]);
@@ -538,19 +603,16 @@ const UserAppView = memo(({ appMode, bettingData, setBettingData, liveMatches, a
     const handleUserBet = useCallback((matchId, prediction, odds, wagerAmount) => {
         if (!wagerAmount || wagerAmount <= 0) return showToast("Monto inválido", "error");
         setBettingData(prev => {
-            const user = prev.users[appMode] || { coins: 0, bets: [] };
+            const user = prev.users[appMode] || { name: defaultName, coins: 1000, bets: [] };
             if (user.coins < wagerAmount) { showToast("Fondos insuficientes", "error"); return prev; }
             const newBet = { id: Date.now(), matchId, prediction, odds: parseFloat(odds), wager: parseFloat(wagerAmount), status: 'pending', timestamp: new Date().toISOString() };
             showToast("Apuesta colocada", "success");
             return { ...prev, users: { ...prev.users, [appMode]: { ...user, coins: user.coins - wagerAmount, bets: [newBet, ...user.bets] } } };
         });
-    }, [appMode, setBettingData, showToast]);
+    }, [appMode, setBettingData, showToast, defaultName]);
 
     const activeTeams = allSortedTeams.filter(t => t.division === activeDiv);
-    
-    // ENFRENTAMIENTOS GLOBALES: Quitamos el filtro por división activa para que todos los usuarios puedan ver todos los partidos en curso.
     const activeLiveMatches = liveMatches;
-    
     const userMessages = messages.filter(m => m.target === 'all' || m.target === appMode).sort((a, b) => b.timestamp - a.timestamp);
 
     return (
@@ -577,7 +639,6 @@ const UserAppView = memo(({ appMode, bettingData, setBettingData, liveMatches, a
             <div className="p-4 flex-1 flex flex-col gap-5">
                 <AdCarousel ads={leagueSettings.ads} />
 
-                {/* CARRUSEL DE MENSAJES Y RENDERS */}
                 {userMessages.length > 0 && (
                     <div className="w-full bg-black/20 border border-white/5 py-5 rounded-3xl">
                         <div className="flex overflow-x-auto snap-x custom-scrollbar px-4 gap-5 pb-2">
@@ -772,6 +833,7 @@ export default function App() {
     const [userAppTab, setUserAppTab] = useState('home'); 
 
     const [user, setUser] = useState(null);
+    const [role, setRole] = useState(null); // 'admin' o 'user'
     const [authChecked, setAuthChecked] = useState(false);
     const [isDataLoaded, setIsDataLoaded] = useState(false);
     
@@ -824,7 +886,7 @@ export default function App() {
     const [jornadaSummary, setJornadaSummary] = useState([]);
     const [editingMatchId, setEditingMatchId] = useState(null);
     
-    // Control de Docks (Menús)
+    // Control de Docks
     const [isMenuOpen, setIsMenuOpen] = useState(true);
     const [isDivMenuOpen, setIsDivMenuOpen] = useState(false);
     
@@ -863,7 +925,6 @@ export default function App() {
     const showToast = useCallback((msg, type = 'success') => { setToast({message: msg, type, isVisible: true}); setTimeout(() => setToast(x => ({...x, isVisible: false})), 3000); }, []);
     const requireConfirm = useCallback((message, callback, title) => setConfirmDialog({isOpen: true, message, onConfirm: callback, title}), []);
 
-    // Funciones para gestionar Anuncios (Ads)
     const handleAddAd = async (e) => {
         if (e.target.files[0]) {
             showToast("Procesando imagen...", "info");
@@ -978,14 +1039,22 @@ export default function App() {
         });
     }, [calendarMatches, uiState.view, allSortedTeams, bettingData.divisionWeights, bettingData.activeBets]);
 
+    // ==========================================
+    // ESCUCHADOR DE SESIÓN Y ROLES
+    // ==========================================
     useEffect(() => { 
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-                else await signInAnonymously(auth);
-            } catch (e) { console.error("Auth:", e); }
-        }; 
-        const unsub = onAuthStateChanged(auth, u => { if (u) { setUser(u); setAuthChecked(true); } else initAuth(); }); 
+        const unsub = onAuthStateChanged(auth, u => { 
+            if (u) { 
+                setUser(u); 
+                const isAdminUser = ADMIN_EMAILS.includes(u.email);
+                setRole(isAdminUser ? 'admin' : 'user');
+                setAppMode(isAdminUser ? 'admin' : u.uid);
+            } else {
+                setUser(null);
+                setRole(null);
+            }
+            setAuthChecked(true); 
+        }); 
         return () => unsub(); 
     }, []);
 
@@ -1121,7 +1190,6 @@ export default function App() {
     };
     const cancelLiveMatchSchedule = id => requireConfirm("¿Cancelar partido?", () => { setLiveMatches(p => p.filter(x => x.id !== id)); showToast("Cancelado", "info"); }, "Confirmar");
     
-    // IMPACTA LA BASE DE DATOS (CON PUNTOS CUSTOMIZABLES DESDE EL BUFFER)
     const cloudFn_commitJornada = () => {
         let nt = [...teams], nu = { ...bettingData.users }; 
         jornadaSummary.forEach(m => {
@@ -1566,7 +1634,6 @@ export default function App() {
                     
                     const rp = tData.players || []; 
                     if (rp.length > 0) {
-                        // Escalado dinámico en base al número de jugadores
                         const c = Math.min(6, Math.max(3, Math.ceil(Math.sqrt(rp.length))));
                         const r = Math.ceil(rp.length / c);
                         const gx = 120, gy = 150; 
@@ -1604,7 +1671,9 @@ export default function App() {
     const clearPhotoCache = () => showToast("Caché purgada.", "success");
     const purgeAllData = () => requireConfirm("¿Estás seguro de borrar todos los datos?", () => setTeams([]), "Peligro");
 
-    if (!authChecked || !user || !isDataLoaded) return <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center text-white"><Activity size={40} className="text-cyan-500 mb-4 animate-pulse"/><h2 className="text-sm font-black uppercase text-cyan-500 font-jetbrains tracking-widest">Iniciando OS...</h2></div>;
+    if (!authChecked || isDataLoaded === false && user) return <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center text-white"><Activity size={40} className="text-cyan-500 mb-4 animate-pulse"/><h2 className="text-sm font-black uppercase text-cyan-500 font-jetbrains tracking-widest">Iniciando OS...</h2></div>;
+
+    if (!user) return <LoginScreen />;
 
     return (
         <div 
@@ -1617,14 +1686,26 @@ export default function App() {
             
             <BackgroundEngine themeColor={theme.hex} mouseRef={mouseRef} />
 
-            <div className="w-full bg-[#020617]/80 border-b border-white/10 p-2 flex justify-center items-center gap-2 z-50 sticky top-0 backdrop-blur-xl">
-                <span className="text-[10px] font-black uppercase text-white/50 mr-2 flex items-center gap-1 font-jetbrains"><Smartphone size={12}/> Vistas de Simulación:</span>
-                <div className="flex bg-black/40 rounded-lg border border-white/10 overflow-hidden shadow-inner">
-                    <button onClick={()=>setAppMode('admin')} className={`px-4 py-1.5 text-[9px] font-black uppercase transition-colors font-outfit tracking-wider ${appMode==='admin'?'bg-blue-600/80 text-white':'text-slate-400 hover:bg-white/10'}`}>Admin</button>
-                    <button onClick={()=>setAppMode('user1')} className={`px-4 py-1.5 text-[9px] font-black uppercase transition-colors border-l border-white/5 font-outfit tracking-wider ${appMode==='user1'?'bg-cyan-600/80 text-white':'text-slate-400 hover:bg-white/10'}`}>Jugador 1</button>
-                    <button onClick={()=>setAppMode('user2')} className={`px-4 py-1.5 text-[9px] font-black uppercase transition-colors border-l border-white/5 font-outfit tracking-wider ${appMode==='user2'?'bg-magenta-600/80 text-white':'text-slate-400 hover:bg-white/10'}`}>Jugador 2</button>
+            {role === 'admin' && (
+                <div className="w-full bg-[#020617]/80 border-b border-white/10 p-2 flex justify-center items-center gap-2 z-50 sticky top-0 backdrop-blur-xl">
+                    <span className="text-[10px] font-black uppercase text-white/50 mr-2 flex items-center gap-1 font-jetbrains"><Smartphone size={12}/> Vistas de Simulación:</span>
+                    <div className="flex bg-black/40 rounded-lg border border-white/10 overflow-hidden shadow-inner">
+                        <button onClick={()=>setAppMode('admin')} className={`px-4 py-1.5 text-[9px] font-black uppercase transition-colors font-outfit tracking-wider ${appMode==='admin'?'bg-blue-600/80 text-white':'text-slate-400 hover:bg-white/10'}`}>Admin</button>
+                        <button onClick={()=>setAppMode('user1')} className={`px-4 py-1.5 text-[9px] font-black uppercase transition-colors border-l border-white/5 font-outfit tracking-wider ${appMode==='user1'?'bg-cyan-600/80 text-white':'text-slate-400 hover:bg-white/10'}`}>Jugador 1</button>
+                        <button onClick={()=>setAppMode('user2')} className={`px-4 py-1.5 text-[9px] font-black uppercase transition-colors border-l border-white/5 font-outfit tracking-wider ${appMode==='user2'?'bg-magenta-600/80 text-white':'text-slate-400 hover:bg-white/10'}`}>Jugador 2</button>
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {role !== 'admin' && (
+                <div className="w-full bg-[#020617]/80 border-b border-white/10 p-2 flex justify-between items-center z-50 sticky top-0 backdrop-blur-xl h-[48px]">
+                    <span className="text-[10px] font-black uppercase text-cyan-500/50 ml-2 font-jetbrains"><Activity size={12} className="inline mr-1"/> Nodo Activo</span>
+                    <div className="flex items-center">
+                        <span className="text-[10px] text-slate-400 font-jetbrains mr-3">{user.email}</span>
+                        <button onClick={handleLogout} className="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-white/5 transition-colors"><LogOut size={14}/></button>
+                    </div>
+                </div>
+            )}
 
             {appMode === 'admin' ? (
                 <>
@@ -1970,7 +2051,7 @@ export default function App() {
                                         <button onClick={handleAddDivision} className="glass-panel hover:bg-white/10 text-slate-200 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all border border-white/10 active:scale-95 mt-2 flex items-center justify-center gap-2"><Plus size={16} /> Inicializar Nuevo Nodo</button>
                                     </div>
 
-                                    {/* NUEVO MÓDULO: CARRUSEL PUBLICITARIO (CONFIG) */}
+                                    {/* MÓDULO: CARRUSEL PUBLICITARIO (CONFIG) */}
                                     <div className="glass-panel p-6 rounded-3xl flex flex-col gap-5 shadow-[0_15px_40px_rgba(0,0,0,0.6)] col-span-full relative overflow-hidden">
                                         <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-[80px] pointer-events-none" />
                                         <div className="flex justify-between items-center relative z-10">
@@ -2105,7 +2186,6 @@ export default function App() {
                         </div>
                     </main>
 
-                    {/* Navigations Administrador - Lateral (Left Div Menu) */}
                     <nav ref={leftDivMenuRef} className={`fixed left-0 top-1/3 z-[90] transition-transform duration-500 ${isDivMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                         <div className="glass-panel-heavy rounded-r-3xl p-2.5 flex flex-col gap-1.5 min-w-[140px] shadow-[20px_0_40px_rgba(0,0,0,0.8)] border-l-0">
                             <div className="px-3 py-1.5 border-b border-white/10 mb-1"><span className="text-[9px] font-black uppercase text-slate-500 font-jetbrains tracking-widest">Nodos</span></div>
@@ -2118,12 +2198,10 @@ export default function App() {
                         <button onClick={() => setIsDivMenuOpen(!isDivMenuOpen)} className="absolute -right-8 top-1/2 -translate-y-1/2 glass-panel-heavy border-l-0 w-8 h-16 rounded-r-3xl flex items-center justify-center text-slate-400 shadow-[10px_0_20px_rgba(0,0,0,0.5)]"><ChevronRight size={18} className={`${isDivMenuOpen ? 'rotate-180' : ''} transition-transform duration-300`} /></button>
                     </nav>
 
-                    {/* Control Toggle Dock Inferior */}
                     <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="fixed bottom-2 left-1/2 -translate-x-1/2 z-[95] glass-panel-heavy p-2.5 rounded-full text-slate-400 hover:text-white shadow-[0_0_20px_rgba(0,0,0,0.8)] border border-white/10 transition-all hover:scale-110 flex items-center justify-center">
                         {isMenuOpen ? <ChevronDown size={18}/> : <LayoutDashboard size={18} className="text-cyan-400"/>}
                     </button>
 
-                    {/* Botones Flotantes (Menu Inferior Dashboard) */}
                     <nav ref={bottomMenuRef} className={`fixed bottom-14 left-1/2 -translate-x-1/2 z-[90] w-full max-w-md transition-transform duration-500 ${isMenuOpen ? 'translate-y-0' : 'translate-y-[200%]'}`}>
                         <div className="glass-panel-heavy rounded-[32px] p-2 flex justify-between items-center overflow-x-auto gap-1 mx-4 relative overflow-hidden">
                             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
@@ -2137,12 +2215,14 @@ export default function App() {
                     </nav>
                 </>
             ) : (
-                <UserAppView appMode={appMode} bettingData={bettingData} setBettingData={setBettingData} liveMatches={liveMatches} allSortedTeams={allSortedTeams} getTeamName={getTeamName} showToast={showToast} requireConfirm={requireConfirm} userAppTab={userAppTab} setUserAppTab={setUserAppTab} leagueSettings={leagueSettings} messages={messages} />
+                <UserAppView appMode={appMode} currentUser={user} bettingData={bettingData} setBettingData={setBettingData} liveMatches={liveMatches} allSortedTeams={allSortedTeams} getTeamName={getTeamName} showToast={showToast} requireConfirm={requireConfirm} userAppTab={userAppTab} setUserAppTab={setUserAppTab} leagueSettings={leagueSettings} messages={messages} />
             )}
 
-            {/* Modals & Dialogs Shared */}
+            {/* ==================================================== */}
+            {/* TODOS LOS MODALES REQUERIDOS (NO BLOQUEADOS) */}
+            {/* ==================================================== */}
             
-            {/* Roster & Add Photo */}
+            {/* 1. Modal Plantilla / Roster */}
             <Modal isOpen={!!uiState.activeRosterTeamId && !uiState.activePlayerCard} onClose={() => updateUi('activeRosterTeamId', null)} title={activeTeamForRoster?.name || "Plantilla"} icon={Shield} theme={theme} maxWidth="max-w-5xl">
                 {activeTeamForRoster && (
                     <div className="flex flex-col gap-6">
@@ -2185,7 +2265,7 @@ export default function App() {
                 )}
             </Modal>
 
-            {/* Recorte Grupal Escalable Modal */}
+            {/* 2. Modal Recorte Grupal IA */}
             <Modal isOpen={uiState.groupCrop?.active} onClose={closeGroupCrop} title="Recorte Biométrico Grupal" icon={Users} theme={{hex: '#06b6d4'}} maxWidth="max-w-4xl">
                 <div className="flex flex-col gap-5">
                     <div className="flex flex-col gap-1.5 text-[10px] text-cyan-400 font-bold glass-panel border-cyan-500/30 p-4 rounded-2xl shadow-[0_0_15px_rgba(6,182,212,0.1)] font-jetbrains tracking-wider">
@@ -2225,7 +2305,7 @@ export default function App() {
                 </div>
             </Modal>
 
-            {/* Ficha Jugador */}
+            {/* 3. Modal Ficha de Jugador HD */}
             <Modal isOpen={!!uiState.activePlayerCard} onClose={() => updateUi('activePlayerCard', null)} title="Expediente Técnico" icon={User} theme={{hex: '#D4AF37'}} maxWidth="max-w-4xl">
                 {activePlayerContext && (() => {
                     const { team, player } = activePlayerContext;
@@ -2307,6 +2387,7 @@ export default function App() {
                 })()}
             </Modal>
 
+            {/* 4. Modal Buffer Cuántico (Jornada) */}
             <Modal isOpen={uiState.modal === 'jornada'} onClose={() => updateUi('modal', null)} title="Buffer Cuántico (Jornada)" icon={Database} theme={{hex: '#10b981'}} maxWidth="max-w-2xl">
                 <div className="flex flex-col gap-5">
                     <p className="text-xs text-slate-400 font-bold font-outfit tracking-wider bg-black/40 p-4 rounded-2xl border border-white/5 shadow-inner">Verifica las resoluciones y los puntos asignados antes de impactar el núcleo. Puedes sobreescribir los puntos manualmente si es necesario.</p>
@@ -2354,7 +2435,7 @@ export default function App() {
                 </div>
             </Modal>
 
-            {/* Render Studio Central con Distribuidor a App 2 */}
+            {/* 5. Render Studio Central con Distribuidor a App 2 */}
             {renderStudio.active && (
                 <div className="fixed inset-0 z-[150] bg-[#020617]/95 backdrop-blur-xl flex flex-col md:flex-row animate-fade-in">
                     <div className="flex-1 relative flex items-center justify-center p-4 md:p-8 overflow-hidden">
@@ -2403,6 +2484,7 @@ export default function App() {
                 </div>
             )}
 
+            {/* 6. Onboarding Inicial */}
             {onboardingState.active && (
                 <div className="fixed inset-0 z-[200] bg-[#020617]/95 backdrop-blur-xl flex items-center justify-center p-4">
                     <div className="glass-panel-heavy border border-cyan-500/30 w-full max-w-lg rounded-3xl p-8 flex flex-col gap-8 shadow-[0_0_50px_rgba(6,182,212,0.2)] animate-scale-in relative overflow-hidden">
@@ -2425,9 +2507,7 @@ export default function App() {
                     </div>
                 </div>
             )}
-
-            <ConfirmDialog {...confirmDialog} onClose={() => setConfirmDialog(prev => ({...prev, isOpen: false}))} />
-            <Toast {...toast} />
+            
         </div>
     );
 }
