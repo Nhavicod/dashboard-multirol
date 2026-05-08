@@ -678,9 +678,8 @@ const HubModule = memo(({ icon: Icon, color, label, isActive, onClick }) => (
 ));
 
 // ==========================================
-// 4. VISTAS PRINCIPALES DE LA APP (USER/JUGADOR)
+// 4. VISTA JUGADOR (CONSOLIDADA)
 // ==========================================
-
 const UserAppView = memo(({ appMode, currentUser, bettingData, setBettingData, liveMatches, allSortedTeams, getTeamName, showToast, requireConfirm, userAppTab, setUserAppTab, leagueSettings, messages }) => {
     const defaultName = currentUser?.email?.split('@')[0] || 'Jugador';
     const currentUserData = bettingData.users[appMode] || { name: defaultName, coins: 1000, bets: [] };
@@ -959,18 +958,16 @@ export default function App() {
     const [userAppTab, setUserAppTab] = useState('home'); 
 
     const [user, setUser] = useState(null);
-    const [role, setRole] = useState(null); // 'admin' o 'user'
+    const [role, setRole] = useState(null);
     const [authChecked, setAuthChecked] = useState(false);
     const [isDataLoaded, setIsDataLoaded] = useState(false);
     
-    // Core Data
     const [teams, setTeams] = useState(INITIAL_TEAMS);
     const [liveMatches, setLiveMatches] = useState([]);
     const [agendaData, setAgendaData] = useState({ reminders: [], referees: [] });
     const [calendarMatches, setCalendarMatches] = useState([{ id: Date.now(), t1Id: '', t2Id: '', date: '', time: '', analysis: null }]);
     const [messages, setMessages] = useState([]); 
     
-    // League Config
     const [leagueSettings, setLeagueSettings] = useState({ 
         leagueName: 'LIGA PROFESIONAL FUT7', leagueSubtitle: 'LMS CORE', jornada: '15', 
         matchDay: new Date().toISOString().split('T')[0], customLogo: null, logoSize: 100, 
@@ -984,7 +981,6 @@ export default function App() {
     });
     const [activeDivision, setActiveDivision] = useState('CONO NORTE');
     
-    // Betting & Users
     const [bettingData, setBettingData] = useState({
         coinValueReal: 1.0, casinoEnabled: true,
         packages: [{ id: 1, name: 'Starter Pack', coins: 100, price: 90 }], prizes: [{ id: 1, name: 'Balón Oficial', cost: 5000, imgUrl: '' }],
@@ -993,7 +989,6 @@ export default function App() {
     });
     const [oddsDraft, setOddsDraft] = useState({}); 
 
-    // UI State
     const [uiState, setUiState] = useState({ 
         view: 'dashboard', isEditingTable: false, directorySearch: '', 
         modal: null, activeRosterTeamId: null, activePlayerCard: null, isImporting: false, 
@@ -1007,7 +1002,6 @@ export default function App() {
     const [isRenderingPreview, setIsRenderingPreview] = useState(false);
     const [onboardingState, setOnboardingState] = useState({ active: false, step: 1, tempName: '', tempLogo: null, tempDivs: [] });
     
-    // Refs & Temp State
     const previewCanvasRef = useRef(null);
     const lastSyncStr = useRef(null);
     const saveTimeoutRef = useRef(null);
@@ -1017,7 +1011,6 @@ export default function App() {
     const [jornadaSummary, setJornadaSummary] = useState([]);
     const [editingMatchId, setEditingMatchId] = useState(null);
     
-    // Control de Docks
     const [isMenuOpen, setIsMenuOpen] = useState(true);
     const [isDivMenuOpen, setIsDivMenuOpen] = useState(false);
     
@@ -1103,7 +1096,7 @@ export default function App() {
     const downloadCanvasHelper = (canvas, filename) => {
         const link = document.createElement('a');
         link.download = filename;
-        link.href = canvas.toDataURL('image/png'); // Exportación HD Pura
+        link.href = canvas.toDataURL('image/png'); 
         link.click();
         showToast("Descarga HD iniciada", "success");
     };
@@ -1409,7 +1402,7 @@ export default function App() {
     }), [theme.hex]);
     const openRenderStudio = useCallback((type, data) => { updateUi('modal', null); setRenderStudio({ active: true, type, data, settings: { sponsorId: '', style: 'glass' }, broadcastText: '' }); }, [updateUi]);
     
-    // REDUCCIÓN DE CHAT - MANTIENE LOCAL EN HD
+    // REDUCCIÓN PARA CHAT 
     const handleBroadcastRender = async (target) => {
         if(!previewCanvasRef.current) return;
         setIsRenderingPreview(true); showToast("Comprimiendo y Enviando...", "info");
@@ -2468,8 +2461,7 @@ export default function App() {
                         <span className="text-[10px] font-black text-cyan-500 font-jetbrains w-6 text-right">{cropRadius}%</span>
                     </div>
 
-                    <div className="w-full text-center overflow-x-auto bg-[#020617] rounded-3xl border border-white
-                    /10 p-2 shadow-inner">
+                    <div className="w-full text-center overflow-x-auto bg-[#020617] rounded-3xl border border-white/10 p-2 shadow-inner">
                         <div className="relative inline-block rounded-2xl overflow-hidden cursor-crosshair">
                             <img src={uiState.groupCrop?.imgUrl} className="block object-contain" style={{maxHeight: '55vh', maxWidth: '100%'}} alt="Grupal" onClick={(e) => {
                                 const rect = e.target.getBoundingClientRect();
@@ -2492,6 +2484,182 @@ export default function App() {
                     </div>
                 </div>
             </Modal>
+
+            <Modal isOpen={!!uiState.activePlayerCard} onClose={() => updateUi('activePlayerCard', null)} title="Expediente Técnico" icon={User} theme={{hex: '#D4AF37'}} maxWidth="max-w-4xl">
+                {activePlayerContext && (() => {
+                    const { team, player } = activePlayerContext;
+                    return (
+                        <div className="flex flex-col md:flex-row gap-8">
+                            <div className="w-full md:w-2/5 flex flex-col gap-4">
+                                <div className="aspect-[3/4] glass-panel rounded-3xl border-2 border-[#D4AF37]/40 relative overflow-hidden flex items-center justify-center group shadow-[0_0_30px_rgba(212,175,55,0.15)] bg-gradient-to-t from-black/80 to-transparent">
+                                    {player.photo ? <img src={player.photo} className="w-full h-full object-cover relative z-10" alt="P" /> : <User size={80} className="text-[#D4AF37]/20 relative z-10" />}
+                                    <div className="absolute top-4 left-4 z-20 flex gap-2">
+                                        <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-lg text-white font-black font-jetbrains text-sm shadow-lg">{player.position}</div>
+                                        <div className="bg-[#D4AF37]/90 text-black px-3 py-1.5 rounded-lg font-black font-jetbrains text-sm shadow-[0_0_15px_rgba(212,175,55,0.5)]">OVR {player.ovr}</div>
+                                    </div>
+                                    <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-[#020617] to-transparent z-10" />
+                                    <div className="absolute inset-0 bg-[#020617]/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center z-30 transition-opacity">
+                                        <label className="glass-panel border-cyan-500/50 text-cyan-400 px-5 py-3 rounded-xl font-black text-xs uppercase tracking-widest cursor-pointer hover:bg-cyan-500 hover:text-white transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                                            <Upload size={16}/> Reemplazar Biometría
+                                            <input type="file" accept="image/*" className="hidden" onChange={async e => { if(e.target.files[0]) handleUpdatePlayerField(team.id, player.id, 'photo', await compressImage(e.target.files[0], 250, 0.8)); }} />
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-1 flex flex-col gap-5">
+                                <div className="glass-panel p-5 rounded-3xl flex flex-col gap-4 shadow-inner">
+                                    <h4 className="text-[10px] font-black uppercase text-slate-500 tracking-widest font-jetbrains border-b border-white/10 pb-2">Datos Base</h4>
+                                    <div className="flex flex-col sm:flex-row gap-4">
+                                        <div className="flex-1 flex flex-col gap-1.5">
+                                            <label className="text-[9px] text-[#D4AF37] uppercase font-black tracking-widest font-jetbrains">Identidad</label>
+                                            <input type="text" value={player.name} onChange={e => handleUpdatePlayerField(team.id, player.id, 'name', e.target.value)} className="w-full bg-black/60 rounded-xl p-3 text-base text-white font-black outline-none border border-white/10 focus:border-[#D4AF37] transition-colors font-outfit uppercase tracking-wider"/>
+                                        </div>
+                                        <div className="w-full sm:w-24 flex flex-col gap-1.5">
+                                            <label className="text-[9px] text-[#D4AF37] uppercase font-black tracking-widest font-jetbrains">Dorsal</label>
+                                            <input type="number" value={player.number} onChange={e => handleUpdatePlayerField(team.id, player.id, 'number', parseInt(e.target.value)||0)} className="w-full bg-black/60 rounded-xl p-3 text-base text-[#D4AF37] text-center font-black outline-none border border-white/10 focus:border-[#D4AF37] transition-colors font-jetbrains"/>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row gap-4">
+                                        <div className="flex-1 flex flex-col gap-1.5">
+                                            <label className="text-[9px] text-[#D4AF37] uppercase font-black tracking-widest font-jetbrains">Posición</label>
+                                            <select value={player.position} onChange={e => handleUpdatePlayerField(team.id, player.id, 'position', e.target.value)} className="w-full bg-black/60 rounded-xl p-3 text-sm text-white font-black outline-none border border-white/10 focus:border-[#D4AF37] transition-colors font-jetbrains cursor-pointer">
+                                                {['POR', 'DEF', 'MED', 'DEL', 'DT'].map(pos => <option key={pos} value={pos} className="bg-slate-900">{pos}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="flex-1 flex flex-col gap-1.5">
+                                            <label className="text-[9px] text-[#D4AF37] uppercase font-black tracking-widest font-jetbrains">Rating Global (OVR)</label>
+                                            <input type="number" value={player.ovr} onChange={e => handleUpdatePlayerField(team.id, player.id, 'ovr', parseInt(e.target.value)||0)} className="w-full bg-black/60 rounded-xl p-3 text-sm text-white font-black outline-none border border-white/10 focus:border-[#D4AF37] transition-colors font-jetbrains cursor-pointer"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="glass-panel p-5 rounded-3xl flex flex-col gap-4 shadow-inner">
+                                    <h4 className="text-[10px] font-black uppercase text-slate-500 tracking-widest font-jetbrains border-b border-white/10 pb-2">Sistema Disciplinario</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-black/40 border border-yellow-500/20 rounded-2xl p-4 flex flex-col items-center justify-center gap-2">
+                                            <div className="w-6 h-8 bg-yellow-400 rounded shadow-[0_0_10px_rgba(234,179,8,0.5)] transform -rotate-12" />
+                                            <span className="text-2xl font-black font-jetbrains text-white">{getActiveYellows(player.yellowCardsList)}</span>
+                                            <div className="flex gap-2 w-full mt-2">
+                                                <button onClick={() => handleUpdateCard(team.id, player.id, 'yellow', 'add')} className="flex-1 bg-yellow-500/20 text-yellow-400 py-2 rounded-lg font-black text-xs hover:bg-yellow-500 hover:text-black transition-colors">+</button>
+                                                <button onClick={() => handleUpdateCard(team.id, player.id, 'yellow', 'sub')} className="flex-1 bg-white/5 text-slate-400 py-2 rounded-lg font-black text-xs hover:bg-white/10 transition-colors">-</button>
+                                            </div>
+                                        </div>
+                                        <div className="bg-black/40 border border-rose-500/20 rounded-2xl p-4 flex flex-col items-center justify-center gap-2">
+                                            <div className="w-6 h-8 bg-rose-500 rounded shadow-[0_0_10px_rgba(244,63,94,0.5)] transform rotate-12" />
+                                            <span className="text-2xl font-black font-jetbrains text-white">{player.redCards || 0}</span>
+                                            <div className="flex gap-2 w-full mt-2">
+                                                <button onClick={() => handleUpdateCard(team.id, player.id, 'red', 'add')} className="flex-1 bg-rose-500/20 text-rose-400 py-2 rounded-lg font-black text-xs hover:bg-rose-500 hover:text-white transition-colors">+</button>
+                                                <button onClick={() => handleUpdateCard(team.id, player.id, 'red', 'sub')} className="flex-1 bg-white/5 text-slate-400 py-2 rounded-lg font-black text-xs hover:bg-white/10 transition-colors">-</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {getRemainingSuspension(player) > 0 && (
+                                        <div className="bg-rose-900/40 border border-rose-500/50 p-4 rounded-2xl flex items-center justify-between shadow-[inset_0_0_20px_rgba(244,63,94,0.2)]">
+                                            <span className="text-rose-400 font-black text-xs uppercase tracking-widest flex items-center gap-2"><AlertCircle size={16}/> Castigo Activo</span>
+                                            <span className="text-white font-black font-jetbrains text-sm">{getRemainingSuspension(player)} Días Restantes</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+            </Modal>
+
+            <Modal isOpen={uiState.modal === 'jornada'} onClose={() => updateUi('modal', null)} title="Buffer Cuántico (Jornada)" icon={Database} theme={{hex: '#10b981'}} maxWidth="max-w-2xl">
+                <div className="flex flex-col gap-5">
+                    <p className="text-xs text-slate-400 font-bold font-outfit tracking-wider bg-black/40 p-4 rounded-2xl border border-white/5 shadow-inner">Verifica las resoluciones y los puntos asignados antes de impactar el núcleo. Puedes sobreescribir los puntos manualmente si es necesario.</p>
+                    <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
+                        {jornadaSummary.map(m => (
+                            <div key={m.tempId} className="glass-panel rounded-2xl p-4 flex items-center justify-between border-emerald-500/30 relative shadow-md">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 rounded-l-2xl shadow-[0_0_10px_#10b981]"/>
+                                <span className="flex-1 text-right text-sm font-black text-white truncate px-3 font-outfit tracking-wider">{m.t1Name}</span>
+                                <div className="flex flex-col gap-1 items-center bg-black/60 px-4 py-2 rounded-xl shadow-inner border border-white/10 mx-2">
+                                    <div className="flex items-center gap-3">
+                                        <input type="number" value={m.g1} onChange={e=>{
+                                            const g1 = parseInt(e.target.value)||0;
+                                            const pts1 = g1 > m.g2 ? 3 : g1 === m.g2 ? 1 : 0;
+                                            const pts2 = m.g2 > g1 ? 3 : g1 === m.g2 ? 1 : 0;
+                                            setJornadaSummary(p=>p.map(x=>x.tempId===m.tempId?{...x, g1, pts1, pts2}:x));
+                                        }} className="w-8 bg-transparent text-center text-xl font-black text-emerald-400 outline-none font-jetbrains" style={{textShadow: '0 0 10px rgba(16,185,129,0.5)'}}/>
+                                        <span className="text-slate-600 font-black">-</span>
+                                        <input type="number" value={m.g2} onChange={e=>{
+                                            const g2 = parseInt(e.target.value)||0;
+                                            const pts1 = m.g1 > g2 ? 3 : m.g1 === g2 ? 1 : 0;
+                                            const pts2 = g2 > m.g1 ? 3 : m.g1 === g2 ? 1 : 0;
+                                            setJornadaSummary(p=>p.map(x=>x.tempId===m.tempId?{...x, g2, pts1, pts2}:x));
+                                        }} className="w-8 bg-transparent text-center text-xl font-black text-emerald-400 outline-none font-jetbrains" style={{textShadow: '0 0 10px rgba(16,185,129,0.5)'}}/>
+                                    </div>
+                                    <div className="flex w-full justify-between items-center px-1 border-t border-white/5 pt-1 mt-1">
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-[8px] text-slate-500 font-jetbrains">PTS</span>
+                                            <input type="number" value={m.pts1} onChange={e=>setJornadaSummary(p=>p.map(x=>x.tempId===m.tempId?{...x,pts1:parseInt(e.target.value)||0}:x))} className="w-6 bg-transparent text-emerald-400 text-xs font-black outline-none text-center border-b border-emerald-500/50" />
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <input type="number" value={m.pts2} onChange={e=>setJornadaSummary(p=>p.map(x=>x.tempId===m.tempId?{...x,pts2:parseInt(e.target.value)||0}:x))} className="w-6 bg-transparent text-emerald-400 text-xs font-black outline-none text-center border-b border-emerald-500/50" />
+                                            <span className="text-[8px] text-slate-500 font-jetbrains">PTS</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <span className="flex-1 text-left text-sm font-black text-white truncate px-3 font-outfit tracking-wider">{m.t2Name}</span>
+                                <button onClick={()=>setJornadaSummary(p=>p.filter(x=>x.tempId!==m.tempId))} className="text-rose-500 p-2 hover:bg-rose-500/20 rounded-lg transition-colors ml-2"><Trash2 size={16}/></button>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                        <button onClick={()=>updateUi('modal', null)} className="flex-1 glass-panel py-4 rounded-2xl text-xs font-black text-slate-300 uppercase tracking-widest hover:bg-white/10 transition-all active:scale-95">Abortar</button>
+                        <button onClick={cloudFn_commitJornada} className="flex-[2] bg-emerald-600/90 hover:bg-emerald-500 py-4 rounded-2xl text-xs font-black text-white uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all active:scale-95 border border-emerald-400/50 flex items-center justify-center gap-2"><Check size={16}/> Inyectar Resultados al Núcleo</button>
+                    </div>
+                </div>
+            </Modal>
+
+            {renderStudio.active && (
+                <div className="fixed inset-0 z-[150] bg-[#020617]/95 backdrop-blur-xl flex flex-col md:flex-row animate-fade-in">
+                    <div className="flex-1 relative flex items-center justify-center p-4 md:p-8 overflow-hidden">
+                        {isRenderingPreview && <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#020617]/80 z-10 backdrop-blur-sm"><Activity size={48} className="text-cyan-500 animate-pulse mb-4" style={{filter: 'drop-shadow(0 0 15px #06b6d4)'}} /><span className="text-cyan-400 font-jetbrains text-[10px] uppercase tracking-widest">Generando Render 8K...</span></div>}
+                        <div className="relative w-full h-full max-w-full max-h-full flex items-center justify-center">
+                             <div className="absolute inset-0 bg-cyan-500/10 blur-[100px] pointer-events-none rounded-full" />
+                             <canvas ref={previewCanvasRef} className="max-w-full max-h-full object-contain rounded-2xl drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative z-10 border border-white/10" />
+                        </div>
+                    </div>
+                    <div className="w-full md:w-[420px] glass-panel-heavy border-y-0 border-r-0 border-l border-white/10 flex flex-col h-[50vh] md:h-full z-20 shadow-[-20px_0_50px_rgba(0,0,0,0.8)]">
+                        <div className="p-5 border-b border-white/10 flex justify-between items-center bg-black/40">
+                            <h2 className="text-sm font-black uppercase text-white flex items-center gap-3 tracking-widest font-outfit"><Camera size={20} className="text-cyan-400" style={{filter: 'drop-shadow(0 0 8px #06b6d4)'}}/> Estudio Dispatcher</h2>
+                            <button onClick={()=>setRenderStudio({active:false,type:null,data:null,settings:{}})} className="text-slate-400 hover:text-rose-400 p-2 rounded-xl hover:bg-white/5 transition-colors"><X size={20}/></button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-8 custom-scrollbar relative">
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none" />
+                            
+                            <div className="flex flex-col gap-3 relative z-10">
+                                <label className="text-[10px] text-cyan-400 uppercase font-black tracking-widest font-jetbrains">Motor Gráfico (Estilo)</label>
+                                <div className="flex glass-panel rounded-xl p-1.5 shadow-inner">
+                                    {['dark', 'glass'].map(s => (
+                                        <button key={s} onClick={()=>setRenderStudio(p=>({...p,settings:{...p.settings,style:s}}))} className={`flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all tracking-wider ${renderStudio.settings.style === s ? 'bg-cyan-600/80 text-white shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>{s}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent relative z-10"/>
+
+                            <div className="flex flex-col gap-4 relative z-10">
+                                <label className="text-[10px] text-magenta-400 uppercase font-black flex items-center gap-2 tracking-widest font-jetbrains"><MessageSquare size={14}/> Comunicado Global (Opcional)</label>
+                                <textarea value={renderStudio.broadcastText} onChange={e=>setRenderStudio(p=>({...p, broadcastText:e.target.value}))} className="w-full bg-black/60 border border-white/10 rounded-2xl p-4 text-sm text-white font-outfit outline-none focus:border-magenta-500 transition-colors resize-none min-h-[100px] shadow-inner" placeholder="Escribe un mensaje para adjuntar al render..." />
+                                
+                                <div className="grid grid-cols-2 gap-3 mt-2">
+                                    <button onClick={() => handleBroadcastRender('user1')} className="glass-panel border-cyan-500/30 text-cyan-400 text-[10px] font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-cyan-500 hover:text-white transition-all active:scale-95 shadow-md hover:shadow-[0_0_15px_rgba(6,182,212,0.5)] tracking-widest"><Send size={14}/> Jugador 1</button>
+                                    <button onClick={() => handleBroadcastRender('user2')} className="glass-panel border-magenta-500/30 text-magenta-400 text-[10px] font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-magenta-500 hover:text-white transition-all active:scale-95 shadow-md hover:shadow-[0_0_15px_rgba(217,70,239,0.5)] tracking-widest"><Send size={14}/> Jugador 2</button>
+                                    <button onClick={() => handleBroadcastRender('all')} className="col-span-2 bg-gradient-to-r from-cyan-600 to-magenta-600 border border-white/20 text-white text-[11px] font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.2)] tracking-widest"><Megaphone size={16}/> Broadcast Masivo</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-white/10 bg-black/60 relative z-10">
+                            <button onClick={downloadRender} disabled={isRenderingPreview} className="w-full bg-white text-black font-black py-4 rounded-2xl text-xs uppercase flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(255,255,255,0.3)] disabled:opacity-50 disabled:grayscale transition-all active:scale-95 tracking-widest"><Download size={16}/> Descargar HD en Local</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {onboardingState.active && (
                 <div className="fixed inset-0 z-[200] bg-[#020617]/95 backdrop-blur-xl flex items-center justify-center p-4">
