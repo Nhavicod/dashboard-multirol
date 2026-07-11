@@ -296,7 +296,7 @@ const getDominantColor = async (src) => {
 // ==========================================
 // PANTALLA DE ACCESO (LOGIN / REGISTRO)
 // ==========================================
-function LoginScreen({ onDevBypass }) {
+function LoginScreen({ onDevBypass, onCancel }) {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState("");
     const [pass, setPass] = useState("");
@@ -339,14 +339,18 @@ function LoginScreen({ onDevBypass }) {
                         <label className="text-[10px] font-black uppercase text-slate-500 ml-2 font-jetbrains">Identificador (Correo)</label>
                         <input type="email" value={email} onChange={e=>setEmail(e.target.value)} className="bg-black/80 border border-cyan-500/20 rounded-2xl p-4 text-white outline-none focus:border-cyan-500 transition-all font-outfit text-sm shadow-inner" placeholder="correo@ejemplo.com" required/>
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black uppercase text-slate-500 ml-2 font-jetbrains">Clave de Encriptación</label>
-                        <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="bg-black/80 border border-cyan-500/20 rounded-2xl p-4 text-white outline-none focus:border-cyan-500 transition-all font-outfit text-sm shadow-inner" placeholder="••••••••" required/>
-                    </div>
-                    {error && <p className="text-rose-400 text-[10px] font-black uppercase text-center mt-2 font-jetbrains bg-rose-500/10 py-2 rounded-lg border border-rose-500/20">{error}</p>}
-                    <button type="submit" disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-black py-4 rounded-2xl mt-2 transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] uppercase text-xs tracking-widest flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 border border-cyan-400/50">
-                        {loading ? <Activity size={18} className="animate-spin" /> : (isLogin ? <><Unlock size={18}/> Iniciar Secuencia</> : <><UserPlus size={18}/> Registrar Identidad</>)}
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-6">
+                    <input type="email" placeholder="ID.Operador@nexus.com" value={email} onChange={e => setEmail(e.target.value)} required className="bg-[#020617] border border-cyan-500/30 rounded-xl px-4 py-3 text-white font-jetbrains text-sm outline-none focus:border-cyan-400 transition-colors shadow-inner" />
+                    <input type="password" placeholder="Clave de Acceso" value={pass} onChange={e => setPass(e.target.value)} required className="bg-[#020617] border border-cyan-500/30 rounded-xl px-4 py-3 text-white font-jetbrains text-sm outline-none focus:border-cyan-400 transition-colors shadow-inner" />
+                    
+                    <button type="submit" disabled={loading} className="mt-4 w-full bg-cyan-600/90 text-white font-black py-3 rounded-xl uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(6,182,212,0.4)] active:scale-95 transition-transform disabled:opacity-50">
+                        {loading ? <Activity size={20} className="animate-spin mx-auto"/> : (isLogin ? 'Iniciar Conexión' : 'Registrar Operador')}
                     </button>
+                    {onCancel && (
+                        <button type="button" onClick={onCancel} className="mt-2 w-full bg-transparent text-cyan-500 font-black py-3 border border-cyan-500/30 rounded-xl uppercase tracking-widest text-sm hover:bg-cyan-500/10 active:scale-95 transition-transform">
+                            Volver al Inicio
+                        </button>
+                    )}
                 </form>
                 <div className="mt-6 text-center relative z-10">
                     <button onClick={() => { setIsLogin(!isLogin); setError(""); }} className="text-[10px] text-slate-400 hover:text-cyan-400 uppercase font-jetbrains tracking-widest transition-colors">
@@ -610,7 +614,7 @@ const HubModule = memo(({ icon: Icon, color, label, isActive, onClick }) => (
 // ==========================================
 // 4. VISTAS PRINCIPALES DE LA APP (USER/JUGADOR)
 // ==========================================
-const UserAppView = memo(({ appMode, currentUser, bettingData, setBettingData, liveMatches, allSortedTeams, getTeamName, showToast, requireConfirm, userAppTab, setUserAppTab, leagueSettings, messages }) => {
+const UserAppView = memo(({ appMode, currentUser, bettingData, setBettingData, liveMatches, allSortedTeams, getTeamName, showToast, requireConfirm, userAppTab, setUserAppTab, leagueSettings, messages, setShowLogin, updateUi }) => {
     const defaultName = currentUser?.email?.split('@')[0] || 'Jugador';
     const currentUserData = bettingData.users[appMode] || { name: defaultName, coins: 1000, bets: [] };
     const [activeDiv, setActiveDiv] = useState(leagueSettings.divisions[0]?.name || '');
@@ -681,9 +685,9 @@ const UserAppView = memo(({ appMode, currentUser, bettingData, setBettingData, l
                     </div>
                 )}
 
-                <div className="flex gap-3 glass-panel p-2 rounded-2xl border border-cyan-500/20 bg-[#020617]/80">
-                    <button onClick={() => setUserAppTab('home')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all duration-300 font-outfit tracking-wider ${userAppTab === 'home' ? 'bg-cyan-600/90 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] border border-cyan-400/50' : 'text-cyan-600 hover:text-cyan-400 hover:bg-cyan-500/10'}`}>Estación Central</button>
-                    <button onClick={() => setUserAppTab('casino')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all duration-300 flex justify-center items-center gap-2 font-outfit tracking-wider ${userAppTab === 'casino' ? 'bg-magenta-600/90 text-white shadow-[0_0_20px_rgba(217,70,239,0.4)] border border-magenta-400/50' : 'text-magenta-600 hover:text-magenta-400 hover:bg-magenta-500/10'}`}><Wallet size={16}/> Protocolo Apuesta</button>
+                <div className="flex bg-[#020617] border border-cyan-500/20 rounded-2xl p-1.5 sticky top-2 z-50">
+                    <button onClick={() => setUserAppTab('home')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all duration-300 flex justify-center items-center gap-2 font-outfit tracking-wider ${userAppTab === 'home' ? 'bg-cyan-600/90 text-white border border-cyan-400/50' : 'text-cyan-600 hover:text-cyan-400 hover:bg-cyan-500/10'}`}><Activity size={16}/> Resumen General</button>
+                    <button onClick={() => setUserAppTab('casino')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all duration-300 flex justify-center items-center gap-2 font-outfit tracking-wider ${userAppTab === 'casino' ? 'bg-magenta-600/90 text-white border border-magenta-400/50' : 'text-magenta-600 hover:text-magenta-400 hover:bg-magenta-500/10'}`}><Wallet size={16}/> Protocolo Apuesta</button>
                 </div>
 
                 {userAppTab === 'home' && (
@@ -706,16 +710,20 @@ const UserAppView = memo(({ appMode, currentUser, bettingData, setBettingData, l
                                             </div>
                                             {match.status === 'scheduled' ? (
                                                 <div className="flex flex-col justify-center gap-4">
-                                                    <div className="text-sm font-black text-white text-center truncate font-outfit tracking-wider">{getTeamName(match.t1Id)} <span className="text-cyan-500/50 mx-2 text-[10px]">vs</span> {getTeamName(match.t2Id)}</div>
-                                                    <div className="text-center"><span className="text-[10px] font-bold text-cyan-400 bg-[#020617] px-3 py-1.5 rounded-lg border border-cyan-500/30 font-jetbrains tracking-wider shadow-inner">{match.date} a las {match.time || 'TBD'}</span></div>
+                                                    <div className="text-sm font-black text-white text-center truncate font-outfit tracking-wider">
+                                                        <span onClick={() => updateUi('activeRosterTeamId', match.t1Id)} className="cursor-pointer hover:text-cyan-400 transition-colors">{getTeamName(match.t1Id)}</span> 
+                                                        <span className="text-cyan-500/50 mx-2 text-[10px]">vs</span> 
+                                                        <span onClick={() => updateUi('activeRosterTeamId', match.t2Id)} className="cursor-pointer hover:text-cyan-400 transition-colors">{getTeamName(match.t2Id)}</span>
+                                                    </div>
+                                                    <div className="text-center"><span className="text-[10px] font-bold text-cyan-400 bg-[#020617] px-3 py-1.5 rounded-lg border border-cyan-500/30 font-jetbrains tracking-wider">{match.date} a las {match.time || 'TBD'}</span></div>
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center justify-between gap-4 h-[110px]">
                                                     {[1, 2].map(n => (
                                                         <div key={n} className="flex-1 flex flex-col gap-3 min-w-0">
-                                                            <div className="text-center font-bold text-xs text-slate-300 truncate font-outfit tracking-wider">{getTeamName(match[`t${n}Id`])}</div>
-                                                            <div className="flex justify-center items-center gap-1 bg-[#020617] rounded-xl p-2 border border-cyan-500/20 shadow-inner py-4">
-                                                                <span className="text-4xl font-black text-cyan-400 font-jetbrains" style={{textShadow: '0 0 15px rgba(6,182,212,0.3)'}}>{match[`g${n}`]}</span>
+                                                            <div onClick={() => updateUi('activeRosterTeamId', match[`t${n}Id`])} className="text-center font-bold text-xs text-slate-300 truncate font-outfit tracking-wider cursor-pointer hover:text-cyan-400 transition-colors">{getTeamName(match[`t${n}Id`])}</div>
+                                                            <div className="flex justify-center items-center gap-1 bg-[#020617] rounded-xl p-2 border border-cyan-500/20 py-4">
+                                                                <span className="text-4xl font-black text-cyan-400 font-jetbrains">{match[`g${n}`]}</span>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -753,7 +761,7 @@ const UserAppView = memo(({ appMode, currentUser, bettingData, setBettingData, l
                                                 const goalDiff = team.gf - team.gc; 
                                                 const safeLogo = getSafeLogo(team, leagueSettings.divisions);
                                                 return (
-                                                    <tr key={team.id} className="border-b border-cyan-500/10 hover:bg-cyan-500/5 transition-colors group">
+                                                    <tr key={team.id} onClick={() => updateUi('activeRosterTeamId', team.id)} className="border-b border-cyan-500/10 hover:bg-cyan-500/5 transition-colors group cursor-pointer">
                                                         <td className="py-3 px-2 text-center text-slate-400 text-[11px] font-black">{index + 1}</td>
                                                         <td className="py-3 px-3 min-w-[200px]">
                                                             <div className="flex items-center gap-3">
@@ -819,7 +827,12 @@ const UserAppView = memo(({ appMode, currentUser, bettingData, setBettingData, l
                                                 <span className="flex-1 text-center font-black text-sm truncate font-outfit tracking-wider text-white">{team2Name}</span>
                                             </div>
 
-                                            {!hasBet ? (
+                                            {!currentUser ? (
+                                                <div className="mt-4 p-4 text-center bg-[#020617] border border-cyan-500/30 rounded-2xl">
+                                                    <p className="text-xs text-slate-400 font-jetbrains mb-3">Debes iniciar sesión para acceder al Nexus de Apuestas.</p>
+                                                    <button onClick={() => setShowLogin(true)} className="bg-cyan-600/90 text-white font-black py-2 px-6 rounded-xl text-[10px] uppercase tracking-widest">Inicia Sesión</button>
+                                                </div>
+                                            ) : !hasBet ? (
                                                 <div className="grid grid-cols-3 gap-3 mt-2">
                                                     <button onClick={() => requireConfirm(`¿Asignar 50 carga al LOCAL (${team1Name})? Multiplicador: x${betInfo.o1}`, ()=>handleUserBet(mId, 'o1', betInfo.o1, 50), "Confirmar Asignación")} className="bg-[#020617] hover:bg-magenta-900/40 border border-magenta-500/30 hover:border-magenta-500/70 rounded-2xl py-4 flex flex-col items-center justify-center gap-2 transition-all duration-300 active:scale-95 shadow-inner">
                                                         <span className="text-[10px] font-black uppercase text-slate-400 font-jetbrains">LCL</span>
@@ -882,7 +895,8 @@ const UserAppView = memo(({ appMode, currentUser, bettingData, setBettingData, l
 // 5. COMPONENTE PRINCIPAL (ORQUESTADOR)
 // ==========================================
 export default function App() {
-    const [appMode, setAppMode] = useState('admin'); 
+    const [appMode, setAppMode] = useState('public'); 
+    const [showLogin, setShowLogin] = useState(false);
     const [userAppTab, setUserAppTab] = useState('home'); 
 
     const [user, setUser] = useState(null);
@@ -1199,6 +1213,7 @@ export default function App() {
             } else {
                 setUser(null);
                 setRole(null);
+                setAppMode('public');
             }
             setAuthChecked(true); 
         }); 
@@ -1206,8 +1221,8 @@ export default function App() {
     }, [isDevBypassMode]);
 
     useEffect(() => { 
-        if (!user || isDevBypassMode) return; 
-        const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'appState', 'main'); 
+        if (isDevBypassMode) return; 
+        const ref = doc(db, 'artifacts', appId, 'appState', 'main'); 
         const unsub = onSnapshot(ref, snap => {
             if (snap.exists()) {
                 const data = snap.data(); 
@@ -1243,7 +1258,7 @@ export default function App() {
                 const str = JSON.stringify({t: teams, l: liveMatches, ls: leagueSettings, n: agendaData, b: bettingData, ms: messages}); 
                 if (lastSyncStr.current !== str) {
                     lastSyncStr.current = str; 
-                    setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'appState', 'main'), {teams, liveMatches, leagueSettings, notes: agendaData, bettingData, messages}, {merge: true})
+                    setDoc(doc(db, 'artifacts', appId, 'appState', 'main'), {teams, liveMatches, leagueSettings, notes: agendaData, bettingData, messages}, {merge: true})
                         .catch(e => { if (e.code === 'resource-exhausted') showToast("Límite DB", "error"); });
                 }
             }, 1500); 
@@ -1850,7 +1865,7 @@ export default function App() {
 
     if (!authChecked || isDataLoaded === false && user) return <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center text-white"><Activity size={40} className="text-cyan-500 mb-4 animate-pulse"/><h2 className="text-sm font-black uppercase text-cyan-500 font-jetbrains tracking-widest">Iniciando OS...</h2></div>;
 
-    if (!user) return <LoginScreen onDevBypass={handleQuickDevEntry} />;
+    if (!user && showLogin) return <LoginScreen onDevBypass={handleQuickDevEntry} onCancel={() => setShowLogin(false)} />;
 
     const renderModuloJornada = () => (
         <section id="modulo-jornada-unificado" className="glass-panel rounded-3xl p-4 md:p-5 min-h-[480px] flex flex-col shadow-[0_15px_40px_rgba(0,0,0,0.6)] relative overflow-hidden border border-cyan-500/30">
@@ -2362,7 +2377,7 @@ export default function App() {
                         <div className="glass-panel-heavy rounded-[32px] p-2 flex justify-between items-center overflow-x-auto gap-1 mx-4 relative overflow-hidden border border-cyan-500/30">
                             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
                             <HubModule icon={LayoutDashboard} color="#06b6d4" label="Panel" isActive={uiState.view === 'dashboard'} onClick={() => updateUi('view', 'dashboard')} />
-                            <HubModule icon={CalendarDays} color="#10b981" label="Live" isActive={uiState.view === 'calendario'} onClick={() => updateUi('view', 'calendario')} />
+
                             <HubModule icon={FolderSearch} color="#f59e0b" label="Docs" isActive={uiState.view === 'directorio'} onClick={() => updateUi('view', 'directorio')} />
                             <HubModule icon={ClipboardPaste} color="#d946ef" label="Notas" isActive={uiState.view === 'notas'} onClick={() => updateUi('view', 'notas')} />
                             <HubModule icon={Coins} color="#f59e0b" label="Casino" isActive={uiState.view === 'coins'} onClick={() => updateUi('view', 'coins')} />
@@ -2371,7 +2386,7 @@ export default function App() {
                     </nav>
                 </>
             ) : (
-                <UserAppView appMode={appMode} currentUser={user} bettingData={bettingData} setBettingData={setBettingData} liveMatches={liveMatches} allSortedTeams={allSortedTeams} getTeamName={getTeamName} showToast={showToast} requireConfirm={requireConfirm} userAppTab={userAppTab} setUserAppTab={setUserAppTab} leagueSettings={leagueSettings} messages={messages} />
+                <UserAppView updateUi={updateUi} setShowLogin={setShowLogin} appMode={appMode} currentUser={user} bettingData={bettingData} setBettingData={setBettingData} liveMatches={liveMatches} allSortedTeams={allSortedTeams} getTeamName={getTeamName} showToast={showToast} requireConfirm={requireConfirm} userAppTab={userAppTab} setUserAppTab={setUserAppTab} leagueSettings={leagueSettings} messages={messages} />
             )}
 
             {/* ==================================================== */}
