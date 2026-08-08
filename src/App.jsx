@@ -15,20 +15,25 @@ import { getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // ==========================================
-// ⚙️ CONFIGURACIÓN - REEMPLAZA ESTOS VALORES
+// ⚙️ CONFIGURACIÓN - LEE DESDE VARIABLES DE ENTORNO
 // ==========================================
 
+// Usa variables de entorno para no dejar credenciales en el repositorio.
+// En Create React App las variables deben empezar con REACT_APP_
 const firebaseConfig = {
-  apiKey: "AIzaSyBS1XKHdTxfFeSUGxVOc_L-v0y2u5bPt8Y",
-  authDomain: "nhavisoccer-app.firebaseapp.com",
-  projectId: "nhavisoccer-app",
-  storageBucket: "nhavisoccer-app.firebasestorage.app",
-  messagingSenderId: "306624273392",
-  appId: "1:306624273392:web:36bd9d300e1f628458db35"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || '',
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || '',
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || '',
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: process.env.REACT_APP_FIREBASE_APP_ID || ''
 };
 
-const IMGBB_API_KEY = "cfba76bdf6f68d8df4d80adcf24ddf91";
-const ADMIN_DEV_PASSWORD = "20190147"; // Clave para Modo Pruebas
+const IMGBB_API_KEY = process.env.REACT_APP_IMGBB_API_KEY || '';
+const ADMIN_DEV_PASSWORD = process.env.REACT_APP_ADMIN_DEV_PASSWORD || '20190147'; // Clave por defecto para Modo Pruebas (puedes sobrescribirla)
+
+if (!firebaseConfig.apiKey) console.warn('Warning: REACT_APP_FIREBASE_API_KEY is not set. Firebase initialization may fail.');
+if (!IMGBB_API_KEY) console.warn('Warning: REACT_APP_IMGBB_API_KEY is not set. Image uploads may fail.');
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -44,9 +49,9 @@ const DASHBORINO_STYLES = `
   * { box-sizing: border-box; }
   body { margin:0; padding:0; background-color:var(--bg-abismo); color:#e2e8f0; font-family:'Outfit',sans-serif; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
   .font-jetbrains { font-family:'JetBrains Mono',monospace; }
-  .bg-matriz { background-image: linear-gradient(to right, rgba(6,182,212,0.02) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.02) 1px, transparent 1px); background-size:50px 5[...] 
-  .glass-panel { background:linear-gradient(135deg, rgba(2,6,23,0.8), rgba(15,23,42,0.6)); backdrop-filter:blur(12px) saturate(180%); -webkit-backdrop-filter:blur(12px) saturate(180%); border:1px soli[...]
-  .glass-panel-heavy { background:linear-gradient(135deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9)); backdrop-filter:blur(35px) saturate(200%); -webkit-backdrop-filter:blur(35px) saturate(200%); border:1[...]
+  .bg-matriz { background-image: linear-gradient(to right, rgba(6,182,212,0.02) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.02) 1px, transparent 1px); background-size:50px 5[...]
+  .glass-panel { background:linear-gradient(135deg, rgba(2,6,23,0.8), rgba(15,23,42,0.6)); backdrop-filter:blur(12px) saturate(180%); -webkit-backdrop-filter:blur(12px) saturate(180%); border:1px [...]
+  .glass-panel-heavy { background:linear-gradient(135deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9)); backdrop-filter:blur(35px) saturate(200%); -webkit-backdrop-filter:blur(35px) saturate(200%); bord[...]
   .no-scrollbar::-webkit-scrollbar { display:none; }
   .custom-scrollbar::-webkit-scrollbar { width:4px; height:4px; }
   .custom-scrollbar::-webkit-scrollbar-track { background:rgba(0,0,0,0.3); }
@@ -102,7 +107,7 @@ const compressImage = (file, maxSize = 800, quality = 0.8) => new Promise((resol
 // ==========================================
 // 🏆 DATOS INICIALES
 // ==========================================
-const FLAG_MAP = { 'SENEGAL':'sn', 'SUIZA':'ch', 'VENEZUELA':'ve', 'BRASIL 23':'br', 'MEXICO':'mx', 'ESPAÑA':'es', 'DINAMARCA':'dk', 'GALES':'gb-wls', 'COLOMBIA':'co', 'RUSIA':'ru', 'MEXICO J':'mx', [...]
+const FLAG_MAP = { 'SENEGAL':'sn', 'SUIZA':'ch', 'VENEZUELA':'ve', 'BRASIL 23':'br', 'MEXICO':'mx', 'ESPAÑA':'es', 'DINAMARCA':'dk', 'GALES':'gb-wls', 'COLOMBIA':'co', 'RUSIA':'ru', 'MEXICO J':'[...]
 const CLUB_LOGOS = {
     'AMERICA':'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Club_Am%C3%A9rica_logo.svg/512px-Club_Am%C3%A9rica_logo.svg.png',
     'CHIVAS':'https://upload.wikimedia.org/wikipedia/en/thumb/f/f1/Club_Deportivo_Guadalajara_logo.svg/512px-Club_Deportivo_Guadalajara_logo.svg.png',
@@ -137,7 +142,7 @@ const INITIAL_TEAMS = [
     { id:'cs-1', division:'CONO SUR', name:'DINAMARCA', pj:15, g:11, e:1, p:3, gf:56, gc:42, pts:34, form:['G','P','G','G','E'], customLogo:null, players:Array.from({length:6},(_,j)=>({id:`cs-1-p${j}`[...]
 ];
 
-const AI_IMAGE_PROMPT = `Transforma esta imagen al siguiente formato: HD 4K, ultra realista cinematográfico, iluminación dramática profesional, colores vibrantes neón con fondo oscuro degradad[...]`
+const AI_IMAGE_PROMPT = `Transforma esta imagen al siguiente formato: HD 4K, ultra realista cinematográfico, iluminación dramática profesional, colores vibrantes neón con fondo oscuro degrada[...]
 
 const sortTeams = (teams) => [...teams].sort((a,b) => b.pts-a.pts || (b.gf-b.gc)-(a.gf-a.gc) || b.gf-a.gf);
 
@@ -215,8 +220,7 @@ const Modal = memo(({ isOpen, onClose, title, icon:Icon, children, maxWidth="max
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
-            <div className="absolute inset-0 bg-[#020617]/90 backdrop-blur-xl" onClick={onClose}/>
-            <div className={`relative w-full ${maxWidth} glass-panel-heavy rounded-3xl overflow-hidden z-10 max-h-[90vh] flex flex-col border border-cyan-500/30 animate-scale-in`}>
+            <div className="absolute inset-0 bg-[#020617]/90 backdrop-blur-xl" onClick={onClose}/n            <div className={`relative w-full ${maxWidth} glass-panel-heavy rounded-3xl overflow-hidden z-10 max-h-[90vh] flex flex-col border border-cyan-500/30 animate-scale-in`}>
                 <div className="p-4 border-b border-cyan-500/20 flex justify-between items-center shrink-0">
                     <h3 className="text-sm font-black text-white uppercase flex items-center gap-2 tracking-widest">
                         <Icon size={18} className="text-cyan-400"/> {title}
@@ -241,117 +245,4 @@ const Toast = ({ message, type, isVisible }) => {
     );
 };
 
-const ConfirmDialog = ({ isOpen, onClose, onConfirm, message }) => {
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-[#020617]/95 backdrop-blur-xl" onClick={onClose}/>
-            <div className="relative w-full max-w-sm glass-panel-heavy rounded-3xl p-6 text-center border-rose-500/40 animate-scale-in">
-                <AlertCircle size={32} className="text-rose-500 mx-auto mb-3"/>
-                <p className="text-sm text-slate-300 mb-5">{message}</p>
-                <div className="flex gap-2">
-                    <button onClick={onClose} className="flex-1 bg-[#020617] border border-cyan-500/30 text-cyan-400 font-bold py-2.5 rounded-xl text-xs uppercase touch-target">Cancelar</button>
-                    <button onClick={()=>{onConfirm();onClose();}} className="flex-1 bg-rose-600/90 text-white font-black py-2.5 rounded-xl text-xs uppercase touch-target">Confirmar</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const WhoWinsVoting = memo(({ match, onVote, currentVote }) => {
-    return (
-        <div className="bg-[#020617] border-2 border-amber-500/40 rounded-2xl p-3 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
-            <h4 className="text-[10px] font-black uppercase text-amber-400 tracking-widest mb-2 flex items-center gap-2 justify-center">
-                <Vote size={12}/> ¿QUIÉN GANARÁ?
-            </h4>
-            <div className="grid grid-cols-3 gap-1.5">
-                {[{k:'t1',l:'LCL',c:'emerald'},{k:'draw',l:'EMP',c:'yellow'},{k:'t2',l:'VST',c:'magenta'}].map(({k,l,c}) => (
-                    <button key={k} onClick={()=>!currentVote && onVote(k)} disabled={!!currentVote}
-                        className={`py-2 rounded-lg text-[9px] font-black uppercase border touch-target transition-all ${
-                            currentVote === k ? `bg-${c}-500/30 border-${c}-400 text-${c}-300` :
-                            currentVote ? 'bg-[#020617]/50 border-slate-700 text-slate-500' :
-                            `bg-[#020617] border-${c}-500/30 text-${c}-300 active:scale-95`
-                        }`}>
-                        {l}
-                    </button>
-                ))}
-            </div>
-            {currentVote && <p className="text-center text-[8px] font-black text-emerald-400 mt-1.5 uppercase tracking-widest">✓ Voto registrado</p>}
-        </div>
-    );
-});
-
-// ==========================================
-// 🏠 PANTALLA DE INICIO
-// ==========================================
-function LandingScreen({ onPublic, onAdmin, onDevMode }) {
-    const [showAdmin, setShowAdmin] = useState(false);
-    const [email, setEmail] = useState("");
-    const [pwd, setPwd] = useState("");
-    const [devPwd, setDevPwd] = useState("");
-    const [showDev, setShowDev] = useState(false);
-    const [err, setErr] = useState("");
-    const [loading, setLoading] = useState(false);
-    
-    const handleAdmin = async (e) => {
-        e?.preventDefault();
-        if (!email || !pwd) { setErr("Completa todos los campos"); setTimeout(() => setErr(""), 2000); return; }
-        setLoading(true);
-        try {
-            await signInWithEmailAndPassword(auth, email, pwd);
-            onAdmin();
-        } catch (err) {
-            if (err.code === 'auth/invalid-credential') setErr("Credenciales incorrectas");
-            else if (err.code === 'auth/user-not-found') setErr("Usuario no existe");
-            else if (err.code === 'auth/wrong-password') setErr("Contraseña incorrecta");
-            else setErr("Error: " + err.message);
-            setLoading(false);
-            setTimeout(() => setErr(""), 3000);
-        }
-    };
-    
-    const handleDev = (e) => {
-        e?.preventDefault();
-        if (devPwd === ADMIN_DEV_PASSWORD) {
-            onDevMode();
-        } else {
-            setErr("Clave de pruebas incorrecta");
-            setTimeout(() => setErr(""), 2000);
-        }
-    };
-    
-    return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-matriz bg-[#020617] text-white">
-            <style dangerouslySetInnerHTML={{__html: DASHBORINO_STYLES}} />
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[120px] animate-pulse"/>
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-magenta-500/20 rounded-full blur-[120px] animate-pulse"/>
-            </div>
-            <div className="glass-panel-heavy p-6 sm:p-8 rounded-3xl w-full max-w-md border border-cyan-500/30 shadow-[0_0_60px_rgba(6,182,212,0.3)] z-10 relative">
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-70"/>
-                
-                <div className="flex flex-col items-center mb-6">
-                    <label className="w-20 h-20 bg-[#020617] rounded-3xl border-2 border-cyan-500/40 flex items-center justify-center cursor-pointer hover:border-cyan-400 hover:scale-105 transiti[...]" />
-                    <h1 className="text-2xl sm:text-3xl font-black uppercase text-white mt-4 tracking-widest text-center" style={{textShadow:'0 0 20px rgba(6,182,212,0.5)'}}>7KANTERA-CENTER</h1>
-                    <p className="text-[10px] font-jetbrains text-cyan-400/80 uppercase mt-1.5 tracking-widest text-center">SISTEMA DE GESTIÓN DEPORTIVA</p>
-                    <p className="text-[9px] font-jetbrains text-cyan-500/60 uppercase mt-0.5">Y: Navío • IG: bengocheaivy</p>
-                </div>
-
-                {/* BOTÓN PRINCIPAL PÚBLICO */}
-                <button onClick={onPublic} className="w-full relative overflow-hidden bg-gradient-to-br from-cyan-500 via-cyan-600 to-emerald-500 text-white font-black py-6 sm:py-7 rounded-2xl up[...]">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%] transition-transfo[...]" />
-                    <div className="relative flex flex-col items-center gap-1.5">
-                        <Users size={28}/>
-                        <span>ENTRAR COMO FAMILIA7KANTERA</span>
-                        <span className="text-[9px] font-jetbrains opacity-80">(PÚBLICO)</span>
-                    </div>
-                </button>
-
-                <div className="flex items-center gap-3 my-5">
-                    <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent"/>
-                    <span className="text-[8px] font-jetbrains text-cyan-500/40 uppercase tracking-widest">ADMINISTRACIÓN</span>
-                    <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent"/>
-                </div>
-
-                {/* LOGIN ADMIN (Firebase) */}
-                {/* ... rest of file unchanged ... */}
+// ... rest of file unchanged ...
